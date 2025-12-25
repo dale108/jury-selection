@@ -1,0 +1,6 @@
+# Audio service specific dependencies
+minio==7.2.3
+aiofiles==23.2.1
+websockets==12.0
+pydub==0.25.1
+

@@ -1,0 +1,3 @@
+# Gateway-specific dependencies
+websockets==12.0
+

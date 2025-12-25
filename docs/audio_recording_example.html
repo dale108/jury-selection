@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Voir-Dire Audio Recording Example</title>
+</head>
+<body>
+    <h1>Audio Recording Demo</h1>
+    <button id="startBtn">Start Recording</button>
+    <button id="stopBtn" disabled>Stop Recording</button>
+    <div id="status"></div>
+    <div id="chunks"></div>
+
+    <script>
+        let mediaRecorder;
+        let websocket;
+        let sessionId = 'your-session-id-here'; // Get from your session creation
+        const chunkInterval = 5000; // Send chunks every 5 seconds
+
+        async function startRecording() {
+            try {
+                // Request microphone access
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        channelCount: 1,
+                        sampleRate: 16000,
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                    } 
+                });
+
+                // Create MediaRecorder with WebM format
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'audio/webm;codecs=opus',
+                    audioBitsPerSecond: 128000
+                });
+
+                // Connect to WebSocket
+                const wsUrl = `ws://localhost:8000/api/audio/stream/${sessionId}`;
+                websocket = new WebSocket(wsUrl);
+
+                websocket.onopen = () => {
+                    console.log('WebSocket connected');
+                    document.getElementById('status').textContent = 'Recording...';
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('stopBtn').disabled = false;
+                };
+
+                websocket.onmessage = (event) => {
+                    const message = JSON.parse(event.data);
+                    console.log('Server message:', message);
+                    
+                    if (message.type === 'start') {
+                        console.log('Recording started:', message.data);
+                    } else if (message.type === 'chunk_received') {
+                        document.getElementById('chunks').textContent = 
+                            `Chunks: ${message.data.chunk_index}, Duration: ${message.data.total_duration.toFixed(1)}s`;
+                    } else if (message.type === 'end') {
+                        console.log('Recording ended:', message.data);
+                    } else if (message.type === 'error') {
+                        console.error('Error:', message.error);
+                    }
+                };
+
+                websocket.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    document.getElementById('status').textContent = 'Error: ' + error;
+                };
+
+                websocket.onclose = () => {
+                    console.log('WebSocket closed');
+                    document.getElementById('status').textContent = 'Disconnected';
+                };
+
+                // Collect audio chunks
+                const audioChunks = [];
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                        
+                        // Send chunk to server via WebSocket
+                        if (websocket.readyState === WebSocket.OPEN) {
+                            websocket.send(event.data);
+                            console.log('Sent chunk:', event.data.size, 'bytes');
+                        }
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    // Send end message
+                    if (websocket && websocket.readyState === WebSocket.OPEN) {
+                        websocket.send(JSON.stringify({ type: 'end' }));
+                        websocket.close();
+                    }
+                    
+                    // Stop all tracks
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                    document.getElementById('status').textContent = 'Recording stopped';
+                    document.getElementById('startBtn').disabled = false;
+                    document.getElementById('stopBtn').disabled = true;
+                };
+
+                // Start recording with timeslice (chunk every 5 seconds)
+                mediaRecorder.start(chunkInterval);
+                
+            } catch (error) {
+                console.error('Error starting recording:', error);
+                document.getElementById('status').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+        }
+
+        document.getElementById('startBtn').addEventListener('click', startRecording);
+        document.getElementById('stopBtn').addEventListener('click', stopRecording);
+    </script>
+</body>
+</html>
+

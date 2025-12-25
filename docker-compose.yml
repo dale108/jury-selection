@@ -1,0 +1,159 @@
+version: '3.8'
+
+services:
+  # Infrastructure Services
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-voirdire}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-voirdire_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-voirdire}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-voirdire}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  # Application Services
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - AUDIO_SERVICE_URL=http://audio:8001
+      - TRANSCRIPTION_SERVICE_URL=http://transcription:8002
+      - JUROR_SERVICE_URL=http://juror:8003
+      - SESSION_SERVICE_URL=http://session:8004
+    depends_on:
+      - audio
+      - transcription
+      - juror
+      - session
+
+  audio:
+    build:
+      context: .
+      dockerfile: services/audio/Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-voirdire}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-voirdire_secret}
+      - POSTGRES_DB=${POSTGRES_DB:-voirdire}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MINIO_HOST=minio
+      - MINIO_PORT=9000
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - MINIO_BUCKET=audio-recordings
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  transcription:
+    build:
+      context: .
+      dockerfile: services/transcription/Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-voirdire}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-voirdire_secret}
+      - POSTGRES_DB=${POSTGRES_DB:-voirdire}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - HF_AUTH_TOKEN=${HF_AUTH_TOKEN}
+      - USE_SAMPLE_TRANSCRIPT=${USE_SAMPLE_TRANSCRIPT:-false}
+      - SAMPLE_TRANSCRIPT_PATH=${SAMPLE_TRANSCRIPT_PATH:-resources/sample_transcript.txt}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  juror:
+    build:
+      context: .
+      dockerfile: services/juror/Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-voirdire}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-voirdire_secret}
+      - POSTGRES_DB=${POSTGRES_DB:-voirdire}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  session:
+    build:
+      context: .
+      dockerfile: services/session/Dockerfile
+    ports:
+      - "8004:8004"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-voirdire}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-voirdire_secret}
+      - POSTGRES_DB=${POSTGRES_DB:-voirdire}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+
