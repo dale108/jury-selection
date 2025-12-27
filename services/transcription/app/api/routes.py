@@ -1,4 +1,5 @@
 """Transcription service API routes."""
+import asyncio
 import json
 import uuid
 from typing import Optional
@@ -24,11 +25,23 @@ async def list_transcripts(
     session_id: Optional[uuid.UUID] = Query(None),
     juror_id: Optional[uuid.UUID] = Query(None),
     speaker_label: Optional[str] = Query(None),
+    start_time_min: Optional[float] = Query(None, description="Filter segments starting at or after this time (seconds)"),
+    start_time_max: Optional[float] = Query(None, description="Filter segments starting at or before this time (seconds)"),
+    search: Optional[str] = Query(None, description="Search text in transcript content"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
 ):
-    """List transcript segments with filtering."""
+    """List transcript segments with filtering.
+    
+    Supports filtering by:
+    - session_id: Filter by session
+    - juror_id: Filter by juror (via speaker mappings)
+    - speaker_label: Filter by specific speaker
+    - start_time_min: Segments starting at or after this timestamp (seconds)
+    - start_time_max: Segments starting at or before this timestamp (seconds)
+    - search: Text search in transcript content (case-insensitive)
+    """
     query = select(TranscriptSegment)
     count_query = select(func.count()).select_from(TranscriptSegment)
     
@@ -55,6 +68,21 @@ async def list_transcripts(
         else:
             # No mappings, return empty
             return TranscriptList(items=[], total=0, session_id=session_id)
+    
+    # Timestamp filters
+    if start_time_min is not None:
+        query = query.where(TranscriptSegment.start_time >= start_time_min)
+        count_query = count_query.where(TranscriptSegment.start_time >= start_time_min)
+    
+    if start_time_max is not None:
+        query = query.where(TranscriptSegment.start_time <= start_time_max)
+        count_query = count_query.where(TranscriptSegment.start_time <= start_time_max)
+    
+    # Text search
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.where(TranscriptSegment.content.ilike(search_pattern))
+        count_query = count_query.where(TranscriptSegment.content.ilike(search_pattern))
     
     # Get count
     total_result = await db.execute(count_query)

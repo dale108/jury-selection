@@ -172,7 +172,7 @@ curl -s http://localhost:8000/api/sessions/{SESSION_ID} | jq '.'
 ## Sample Transcript Speakers
 
 The sample transcript has these speakers:
-- `SPEAKER_A` - Prosecutor/Judge (most common)
+- `SPEAKER_A` - Defense counsel (she might actually be a prosecutor -- can't tell)
 - `SPEAKER_B` - Juror responses
 - `SPEAKER_C` - Juror responses
 - `SPEAKER_D` - Juror responses

@@ -20,6 +20,32 @@ The system consists of the following microservices:
 
 ## Quick Start
 
+### Option 1: Full Demo with Test Data
+
+The fastest way to see the app in action:
+
+```bash
+# 1. Start all backend services
+docker-compose up -d
+
+# 2. Run the test script (creates session, jurors, loads sample transcript)
+./scripts/test_workflow.sh
+
+# 3. Open the frontend in your browser
+#    The script will print the URL with session ID, e.g.:
+#    http://localhost:5174/?session=<session-id>
+```
+
+The test script will:
+- Clean up any existing test data
+- Create a new voir dire session
+- Create 5 jurors
+- Load a sample transcript with multiple speakers
+- Map speakers to jurors and defense counsel
+- Launch the frontend with the session pre-loaded
+
+### Option 2: Manual Setup
+
 1. Copy the environment file and configure your API keys:
    ```bash
    cp .env.example .env
@@ -31,10 +57,29 @@ The system consists of the following microservices:
    docker-compose up --build
    ```
 
-3. Access the services:
+3. Start the frontend:
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+4. Access the services:
+   - Frontend: http://localhost:5174
    - Gateway API: http://localhost:8000
    - Gateway Docs: http://localhost:8000/docs
    - MinIO Console: http://localhost:9001
+
+### Mock Mode (No API Keys Required)
+
+For development without OpenAI API costs, the transcription service can use a sample transcript:
+
+```bash
+# Set mock mode in docker-compose.yml or .env:
+USE_SAMPLE_TRANSCRIPT=true
+```
+
+This uses `resources/sample_transcript.txt` instead of calling the OpenAI API.
 
 ## API Endpoints
 
@@ -85,16 +130,37 @@ alembic revision --autogenerate -m "description"
 alembic upgrade head
 ```
 
+## Frontend Features
+
+The React frontend provides a professional interface for criminal defense attorneys:
+
+- **Courtroom Layout**: Visual representation of judge, counsel, and jury seating
+- **Juror Management**: Click jurors to view/edit notes, tags, and transcript segments
+- **Quick Assessment**: Mark jurors as favorable/unfavorable/flagged with one click
+- **Challenge Tracker**: Track peremptory strikes and for-cause challenges
+- **Live Transcription**: Real-time audio recording with live transcript display
+- **Transcript Panel**: Searchable transcript with timestamp filtering and speaker mapping
+- **Speaker Mapping**: Associate transcript speakers with specific jurors or counsel
+- **Quick Notes**: Timestamped notes during proceedings with pause/resume
+- **Export Reports**: Export juror notes, transcript, or full report as text files
+- **Juror Tags**: Predefined and custom tags for categorizing jurors
+
 ## Technology Stack
 
+### Backend
 - **Framework**: FastAPI (Python 3.11)
 - **Database**: PostgreSQL 15
 - **Cache/PubSub**: Redis 7
 - **Object Storage**: MinIO (S3-compatible)
-- **Transcription**: OpenAI Whisper API
-- **Speaker Diarization**: pyannote-audio
+- **Transcription**: OpenAI Whisper API / GPT-4o Transcribe
 - **ORM**: SQLAlchemy 2.0
 - **Validation**: Pydantic v2
+
+### Frontend
+- **Framework**: React 18 + TypeScript
+- **Build Tool**: Vite
+- **HTTP Client**: Axios
+- **Styling**: Custom CSS with design system
 
 ## License
 
