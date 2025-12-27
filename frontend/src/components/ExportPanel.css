@@ -1,0 +1,164 @@
+/* ================================================
+   EXPORT PANEL
+   ================================================ */
+
+.export-panel-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--space-lg);
+}
+
+.export-panel {
+  width: 100%;
+  max-width: 480px;
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+}
+
+.export-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-lg);
+  background: var(--color-primary);
+  color: white;
+}
+
+.export-header h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.close-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: white;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.export-content {
+  padding: var(--space-lg);
+}
+
+.export-description {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-lg);
+}
+
+.export-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.export-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+}
+
+.export-option:hover:not(:disabled) {
+  border-color: var(--color-primary-light);
+  background: var(--color-bg-muted);
+}
+
+.export-option:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.export-option.full-report {
+  border-color: var(--color-accent);
+  background: rgba(201, 162, 39, 0.05);
+}
+
+.export-option.full-report:hover:not(:disabled) {
+  background: rgba(201, 162, 39, 0.1);
+}
+
+.option-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-muted);
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.option-icon svg {
+  width: 24px;
+  height: 24px;
+  fill: var(--color-primary);
+}
+
+.export-option.full-report .option-icon {
+  background: var(--color-accent);
+}
+
+.export-option.full-report .option-icon svg {
+  fill: var(--color-primary);
+}
+
+.option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.option-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.option-desc {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.export-status {
+  margin-top: var(--space-lg);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.export-status.success {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--color-favorable);
+}
+

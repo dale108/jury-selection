@@ -1,0 +1,158 @@
+/* ================================================
+   AUDIO RECORDER
+   ================================================ */
+
+.audio-recorder {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.audio-recorder.recording {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.1);
+}
+
+.recorder-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+
+.recorder-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-text-light);
+}
+
+.status-dot.connecting {
+  background: #f59e0b;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.status-dot.connected {
+  background: #dc2626;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.1); }
+}
+
+.status-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.recorder-duration {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.audio-recorder.recording .recorder-duration {
+  color: #dc2626;
+}
+
+/* Audio Level Meter */
+.audio-level-container {
+  height: 4px;
+  background: var(--color-bg-muted);
+  border-radius: var(--radius-full);
+  margin-bottom: var(--space-md);
+  overflow: hidden;
+}
+
+.audio-level-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #f59e0b, #dc2626);
+  border-radius: var(--radius-full);
+  transition: width 0.1s ease-out;
+}
+
+/* Controls */
+.recorder-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+}
+
+.record-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.record-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.record-btn.start {
+  background: #dc2626;
+  color: white;
+}
+
+.record-btn.start:hover {
+  background: #b91c1c;
+}
+
+.record-btn.pause {
+  background: var(--color-bg-muted);
+  color: var(--color-text);
+  padding: var(--space-sm);
+  width: 44px;
+}
+
+.record-btn.pause:hover {
+  background: var(--color-border);
+}
+
+.record-btn.pause.paused {
+  background: var(--color-favorable);
+  color: white;
+}
+
+.record-btn.stop {
+  background: var(--color-bg-muted);
+  color: var(--color-text);
+}
+
+.record-btn.stop:hover {
+  background: #dc2626;
+  color: white;
+}
+
+.paused-indicator {
+  text-align: center;
+  margin-top: var(--space-md);
+  padding: var(--space-xs) var(--space-sm);
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
