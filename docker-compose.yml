@@ -108,7 +108,7 @@ services:
       - REDIS_PORT=6379
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - HF_AUTH_TOKEN=${HF_AUTH_TOKEN}
-      - USE_SAMPLE_TRANSCRIPT=${USE_SAMPLE_TRANSCRIPT:-false}
+      - USE_SAMPLE_TRANSCRIPT=${USE_SAMPLE_TRANSCRIPT:-true}
       - SAMPLE_TRANSCRIPT_PATH=${SAMPLE_TRANSCRIPT_PATH:-resources/sample_transcript.txt}
     depends_on:
       postgres:

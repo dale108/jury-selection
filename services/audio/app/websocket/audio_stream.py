@@ -78,15 +78,21 @@ class AudioStreamHandler:
         except Exception as e:
             if self.recording_id:
                 await self.processor.mark_failed(self.recording_id)
-            await self.websocket.send_json({
-                "type": "error",
-                "error": str(e),
-            })
+            # Only try to send error if connection is still open
+            try:
+                await self.websocket.send_json({
+                    "type": "error",
+                    "error": str(e),
+                })
+            except Exception:
+                pass  # Connection already closed
     
     async def _process_chunk(self, audio_data: bytes) -> None:
         """Process an audio chunk."""
         if not self.recording_id:
             return
+        
+        print(f"AudioStreamHandler: Processing chunk {self.chunk_index}, size={len(audio_data)} bytes")
         
         # Estimate duration based on typical WebM audio
         # Actual duration calculation would need audio parsing
@@ -113,10 +119,10 @@ class AudioStreamHandler:
             duration_seconds=chunk.duration_seconds,
         )
         
-        await redis_client.publish(
-            Channels.audio_chunk(str(self.session_id)),
-            event.model_dump(mode="json"),
-        )
+        channel = Channels.audio_chunk(str(self.session_id))
+        print(f"AudioStreamHandler: Publishing to channel {channel}")
+        await redis_client.publish(channel, event.model_dump(mode="json"))
+        print(f"AudioStreamHandler: Published chunk {chunk.chunk_index}")
         
         # Send confirmation
         await self.websocket.send_json({

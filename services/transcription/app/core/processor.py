@@ -255,25 +255,32 @@ class ChunkSubscriber:
         pubsub = await redis_client.subscribe(channel)
         
         try:
+            print(f"ChunkSubscriber: Listening on channel {channel}")
             while self.running:
                 message = await pubsub.get_message(
                     ignore_subscribe_messages=True,
                     timeout=1.0,
                 )
                 
-                if message and message["type"] == "message":
+                # Handle both regular and pattern messages
+                if message and message["type"] in ("message", "pmessage"):
+                    print(f"ChunkSubscriber: Received message: {message}")
                     event_data = json.loads(message["data"])
                     event = AudioChunkEvent(**event_data)
                     
                     # Process in a new database session
                     async with self.db_factory() as db:
                         processor = TranscriptionProcessor(db)
-                        await processor.process_chunk(event)
+                        segments = await processor.process_chunk(event)
+                        print(f"ChunkSubscriber: Processed {len(segments)} segments")
                 
                 await asyncio.sleep(0.1)
                 
         finally:
-            await pubsub.unsubscribe(channel)
+            if "*" in channel:
+                await pubsub.punsubscribe(channel)
+            else:
+                await pubsub.unsubscribe(channel)
     
     def stop(self):
         """Stop listening for audio chunks."""

@@ -40,10 +40,14 @@ class RedisClient:
             await self._redis.publish(channel, json.dumps(message))
     
     async def subscribe(self, channel: str) -> redis.client.PubSub:
-        """Subscribe to a channel."""
+        """Subscribe to a channel. Supports wildcards with * (uses psubscribe)."""
         if self._redis:
             self._pubsub = self._redis.pubsub()
-            await self._pubsub.subscribe(channel)
+            if "*" in channel:
+                # Use pattern subscribe for wildcards
+                await self._pubsub.psubscribe(channel)
+            else:
+                await self._pubsub.subscribe(channel)
             return self._pubsub
         raise RuntimeError("Redis not connected")
     
