@@ -1,13 +1,44 @@
-import { Participant, CourtroomConfig } from '../types';
+import { Participant, CourtroomConfig, JurorDemographics } from '../types';
 import { api } from '../services/api';
+
+/**
+ * Build demographic notes from imported juror data
+ */
+const buildDemographicNotes = (juror: JurorDemographics): string => {
+  const lines: string[] = [];
+  
+  if (juror.badgeNumber) lines.push(`Badge #: ${juror.badgeNumber}`);
+  if (juror.age) lines.push(`Age: ${juror.age}`);
+  if (juror.education) lines.push(`Education: ${juror.education}`);
+  if (juror.gender) lines.push(`Gender: ${juror.gender}`);
+  if (juror.ethnicity) lines.push(`Ethnicity: ${juror.ethnicity}`);
+  if (juror.phone) lines.push(`Phone: ${juror.phone}`);
+  if (juror.email) lines.push(`Email: ${juror.email}`);
+  if (juror.priorJuryService) {
+    lines.push(`Prior Jury Service: Yes`);
+    if (juror.priorJuryDetails) lines.push(`  Details: ${juror.priorJuryDetails}`);
+  }
+  if (juror.criminalConviction) {
+    lines.push(`Criminal Conviction: Yes`);
+    if (juror.criminalConvictionDetails) lines.push(`  Details: ${juror.criminalConvictionDetails}`);
+  }
+  if (juror.hardship) {
+    lines.push(`Hardship Claim: Yes`);
+    if (juror.hardshipDetails) lines.push(`  Details: ${juror.hardshipDetails}`);
+  }
+  
+  return lines.join('\n');
+};
 
 export interface CreateSessionResult {
   sessionId: string;
+  sessionName: string;
   participants: Participant[];
 }
 
 /**
  * Creates a session and jurors in the backend, then returns participants with backend IDs
+ * If importedJurors is provided, uses that data instead of generic juror names
  */
 export const createSessionWithJurors = async (
   config: CourtroomConfig,
@@ -15,7 +46,8 @@ export const createSessionWithJurors = async (
     case_number?: string;
     case_name?: string;
     court?: string;
-  }
+  },
+  importedJurors?: JurorDemographics[]
 ): Promise<CreateSessionResult> => {
   // Create session in backend
   const session = await api.sessions.create({
@@ -53,15 +85,44 @@ export const createSessionWithJurors = async (
     });
   }
 
+  // Determine juror count - use imported jurors if available, otherwise config
+  const jurorCount = importedJurors?.length || config.jurors;
+
   // Create jurors in backend
   const jurorPromises = [];
-  for (let i = 1; i <= config.jurors; i++) {
+  for (let i = 1; i <= jurorCount; i++) {
+    const imported = importedJurors?.[i - 1];
+    
+    // Build notes from demographic data
+    const demographicNotes = imported ? buildDemographicNotes(imported) : '';
+    
+    // Build demographics object for backend storage
+    const demographics = imported ? {
+      badgeNumber: imported.badgeNumber,
+      age: imported.age,
+      education: imported.education,
+      gender: imported.gender,
+      ethnicity: imported.ethnicity,
+      phone: imported.phone,
+      email: imported.email,
+      priorJuryService: imported.priorJuryService,
+      priorJuryDetails: imported.priorJuryDetails,
+      criminalConviction: imported.criminalConviction,
+      criminalConvictionDetails: imported.criminalConvictionDetails,
+      hardship: imported.hardship,
+      hardshipDetails: imported.hardshipDetails,
+    } : undefined;
+    
     jurorPromises.push(
       api.jurors.create({
         session_id: session.id,
-        seat_number: i,
-        first_name: `Juror`,
-        last_name: `${i}`,
+        seat_number: imported?.seatNumber || i,
+        first_name: imported?.firstName || `Juror`,
+        last_name: imported?.lastName || `${i}`,
+        occupation: imported?.occupation,
+        neighborhood: imported?.city,
+        notes: demographicNotes || undefined,
+        demographics,
       })
     );
   }
@@ -83,6 +144,7 @@ export const createSessionWithJurors = async (
 
   return {
     sessionId: session.id,
+    sessionName: session.case_name || 'Unnamed Session',
     participants,
   };
 };
@@ -137,6 +199,7 @@ export const loadSessionWithJurors = async (
 
   return {
     sessionId: session.id,
+    sessionName: session.case_name || 'Unnamed Session',
     participants,
   };
 };

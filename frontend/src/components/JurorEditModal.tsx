@@ -1,8 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Participant } from '../types';
 import { JurorTags } from './JurorTags';
-import { api, TranscriptSegment } from '../services/api';
+import { api, TranscriptSegment, JurorResponse } from '../services/api';
 import './JurorEditModal.css';
+
+interface Demographics {
+  badgeNumber?: string;
+  age?: number | string;
+  education?: string;
+  gender?: string;
+  ethnicity?: string;
+  phone?: string;
+  email?: string;
+  priorJuryService?: boolean;
+  priorJuryDetails?: string;
+  criminalConviction?: boolean;
+  criminalConvictionDetails?: string;
+  hardship?: boolean;
+  hardshipDetails?: string;
+}
 
 interface JurorEditModalProps {
   juror: Participant | null;
@@ -31,7 +47,10 @@ export const JurorEditModal: React.FC<JurorEditModalProps> = ({
   const [tags, setTags] = useState<string[]>([]);
   const [transcriptSegments, setTranscriptSegments] = useState<TranscriptSegment[]>([]);
   const [isLoadingTranscripts, setIsLoadingTranscripts] = useState(false);
-  const [activeTab, setActiveTab] = useState<'notes' | 'tags' | 'transcript'>('notes');
+  const [activeTab, setActiveTab] = useState<'notes' | 'tags' | 'transcript' | 'questionnaire'>('notes');
+  const [demographics, setDemographics] = useState<Demographics | null>(null);
+  const [jurorDetails, setJurorDetails] = useState<JurorResponse | null>(null);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
   useEffect(() => {
     if (juror) {
@@ -44,8 +63,25 @@ export const JurorEditModal: React.FC<JurorEditModalProps> = ({
   useEffect(() => {
     if (juror && sessionId && isOpen && juror.backendJurorId) {
       loadTranscriptSegments();
+      loadJurorDetails();
     }
   }, [juror, sessionId, isOpen]);
+
+  const loadJurorDetails = async () => {
+    if (!juror?.backendJurorId) return;
+
+    setIsLoadingDetails(true);
+    try {
+      const data = await api.jurors.get(juror.backendJurorId);
+      setJurorDetails(data);
+      setDemographics(data.demographics as Demographics || null);
+    } catch (err: any) {
+      console.error('Failed to load juror details:', err);
+      setDemographics(null);
+    } finally {
+      setIsLoadingDetails(false);
+    }
+  };
 
   const loadTranscriptSegments = async () => {
     if (!juror?.backendJurorId || !sessionId) return;
@@ -210,6 +246,17 @@ export const JurorEditModal: React.FC<JurorEditModalProps> = ({
               <span className="tab-badge">{transcriptSegments.length}</span>
             )}
           </button>
+          <button
+            className={`modal-tab ${activeTab === 'questionnaire' ? 'active' : ''}`}
+            onClick={() => setActiveTab('questionnaire')}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 11l3 3L22 4"/>
+              <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+            </svg>
+            Questionnaire
+            {demographics && <span className="tab-badge">✓</span>}
+          </button>
         </div>
 
         {/* Tab Content */}
@@ -278,6 +325,164 @@ export const JurorEditModal: React.FC<JurorEditModalProps> = ({
               )}
             </div>
           )}
+
+          {activeTab === 'questionnaire' && (
+            <div className="questionnaire-section">
+              {isLoadingDetails && (
+                <div className="loading-state">
+                  <div className="loading-spinner"></div>
+                  <span>Loading questionnaire data...</span>
+                </div>
+              )}
+
+              {!isLoadingDetails && !demographics && !jurorDetails && (
+                <div className="empty-state">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M9 12h6M12 9v6M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  <p>No questionnaire data available</p>
+                  <span>Import juror questionnaires when creating a session to populate this data.</span>
+                </div>
+              )}
+
+              {!isLoadingDetails && (demographics || jurorDetails) && (
+                <div className="questionnaire-content">
+                  {/* Basic Info */}
+                  <div className="q-section">
+                    <h3 className="q-section-title">Basic Information</h3>
+                    <div className="q-grid">
+                      {demographics?.badgeNumber && (
+                        <div className="q-field">
+                          <span className="q-label">Badge Number</span>
+                          <span className="q-value">{demographics.badgeNumber}</span>
+                        </div>
+                      )}
+                      <div className="q-field">
+                        <span className="q-label">Name</span>
+                        <span className="q-value">{juror.name}</span>
+                      </div>
+                      {demographics?.age && (
+                        <div className="q-field">
+                          <span className="q-label">Age</span>
+                          <span className="q-value">{demographics.age}</span>
+                        </div>
+                      )}
+                      {demographics?.gender && (
+                        <div className="q-field">
+                          <span className="q-label">Gender</span>
+                          <span className="q-value">{demographics.gender}</span>
+                        </div>
+                      )}
+                      {demographics?.ethnicity && (
+                        <div className="q-field">
+                          <span className="q-label">Race/Ethnicity</span>
+                          <span className="q-value">{demographics.ethnicity}</span>
+                        </div>
+                      )}
+                      {jurorDetails?.neighborhood && (
+                        <div className="q-field">
+                          <span className="q-label">City/Neighborhood</span>
+                          <span className="q-value">{jurorDetails.neighborhood}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Employment & Education */}
+                  <div className="q-section">
+                    <h3 className="q-section-title">Employment & Education</h3>
+                    <div className="q-grid">
+                      {jurorDetails?.occupation && (
+                        <div className="q-field full-width">
+                          <span className="q-label">Occupation</span>
+                          <span className="q-value">{jurorDetails.occupation}</span>
+                        </div>
+                      )}
+                      {demographics?.education && (
+                        <div className="q-field full-width">
+                          <span className="q-label">Education Level</span>
+                          <span className="q-value">{demographics.education}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Contact Info */}
+                  {(demographics?.phone || demographics?.email) && (
+                    <div className="q-section">
+                      <h3 className="q-section-title">Contact Information</h3>
+                      <div className="q-grid">
+                        {demographics?.phone && (
+                          <div className="q-field">
+                            <span className="q-label">Phone</span>
+                            <span className="q-value">{demographics.phone}</span>
+                          </div>
+                        )}
+                        {demographics?.email && (
+                          <div className="q-field">
+                            <span className="q-label">Email</span>
+                            <span className="q-value">{demographics.email}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Legal History */}
+                  <div className="q-section">
+                    <h3 className="q-section-title">Legal History</h3>
+                    <div className="q-grid">
+                      <div className="q-field">
+                        <span className="q-label">Prior Jury Service</span>
+                        <span className={`q-value q-badge ${demographics?.priorJuryService ? 'yes' : 'no'}`}>
+                          {demographics?.priorJuryService ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                      {demographics?.priorJuryDetails && (
+                        <div className="q-field full-width">
+                          <span className="q-label">Prior Jury Details</span>
+                          <span className="q-value">{demographics.priorJuryDetails}</span>
+                        </div>
+                      )}
+                      <div className="q-field">
+                        <span className="q-label">Criminal Conviction</span>
+                        <span className={`q-value q-badge ${demographics?.criminalConviction ? 'alert' : 'no'}`}>
+                          {demographics?.criminalConviction ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                      {demographics?.criminalConvictionDetails && (
+                        <div className="q-field full-width">
+                          <span className="q-label">Conviction Details</span>
+                          <span className="q-value">{demographics.criminalConvictionDetails}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Hardship */}
+                  {(demographics?.hardship || demographics?.hardshipDetails) && (
+                    <div className="q-section">
+                      <h3 className="q-section-title">Hardship Claim</h3>
+                      <div className="q-grid">
+                        <div className="q-field">
+                          <span className="q-label">Claims Hardship</span>
+                          <span className={`q-value q-badge ${demographics?.hardship ? 'alert' : 'no'}`}>
+                            {demographics?.hardship ? 'Yes' : 'No'}
+                          </span>
+                        </div>
+                        {demographics?.hardshipDetails && (
+                          <div className="q-field full-width">
+                            <span className="q-label">Hardship Details</span>
+                            <span className="q-value">{demographics.hardshipDetails}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Modal Footer */}
@@ -313,7 +518,7 @@ export const JurorEditModal: React.FC<JurorEditModalProps> = ({
           </div>
         )}
 
-        {activeTab === 'transcript' && (
+        {(activeTab === 'transcript' || activeTab === 'questionnaire') && (
           <div className="modal-footer">
             <div className="footer-actions">
               <button className="btn-cancel" onClick={onClose}>

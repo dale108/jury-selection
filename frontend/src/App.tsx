@@ -4,12 +4,14 @@ import { JurorEditModal } from './components/JurorEditModal';
 import { TranscriptPanel } from './components/TranscriptPanel';
 import { SpeakerMappingPanel } from './components/SpeakerMappingPanel';
 import { ChallengeTracker } from './components/ChallengeTracker';
-import { TagFilter } from './components/JurorTags';
+import { ModeIndicator } from './components/ModeIndicator';
+import { JurorImport } from './components/JurorImport';
+import { JurorDemographics } from './types';
 import { QuickNotes } from './components/QuickNotes';
 import { ExportPanel } from './components/ExportPanel';
 import { AudioRecorder, TranscriptSegment as LiveSegment } from './components/AudioRecorder';
 import { LiveTranscript } from './components/LiveTranscript';
-import { Participant, CourtroomConfig, ChallengeConfig, JurorTagKey, QuickNote } from './types';
+import { Participant, CourtroomConfig, ChallengeConfig, QuickNote } from './types';
 import { createSessionWithJurors, loadSessionWithJurors } from './utils/sessionManager';
 import { api, JurorResponse } from './services/api';
 import './App.css';
@@ -45,6 +47,7 @@ const ExportIcon = () => (
 function App() {
   // Session state
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [currentSessionName, setCurrentSessionName] = useState<string>('');
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [jurors, setJurors] = useState<JurorResponse[]>([]);
   
@@ -71,6 +74,11 @@ function App() {
   // Load session input
   const [loadSessionId, setLoadSessionId] = useState('');
   
+  // New session form
+  const [newSessionName, setNewSessionName] = useState('');
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importedJurors, setImportedJurors] = useState<JurorDemographics[]>([]);
+  
   // Challenge tracking
   const [challengeConfig, setChallengeConfig] = useState<ChallengeConfig>({
     peremptoryTotal: 6, // Washington State default for most cases
@@ -78,8 +86,7 @@ function App() {
     causeChallenges: [],
   });
   
-  // Tag filtering
-  const [tagFilters, setTagFilters] = useState<JurorTagKey[]>([]);
+  // Tags are still editable per-juror, but we removed the global filter bar
   
   // Quick notes
   const [quickNotes, setQuickNotes] = useState<QuickNote[]>([]);
@@ -110,6 +117,7 @@ function App() {
       const result = await loadSessionWithJurors(sessionId);
       setParticipants(result.participants);
       setCurrentSessionId(result.sessionId);
+      setCurrentSessionName(result.sessionName);
       
       // Load jurors for mapping
       const jurorsData = await api.jurors.list(sessionId);
@@ -130,13 +138,29 @@ function App() {
     setError(null);
 
     try {
-      const result = await createSessionWithJurors(config);
+      const caseName = newSessionName.trim() || `Session ${new Date().toLocaleDateString()}`;
+      
+      // Use imported jurors if available, otherwise use config count
+      const effectiveConfig = importedJurors.length > 0 
+        ? { ...config, jurors: importedJurors.length }
+        : config;
+      
+      const result = await createSessionWithJurors(
+        effectiveConfig, 
+        { case_name: caseName },
+        importedJurors.length > 0 ? importedJurors : undefined
+      );
+      
       setParticipants(result.participants);
       setCurrentSessionId(result.sessionId);
+      setCurrentSessionName(result.sessionName);
       
       // Load jurors for mapping
       const jurorsData = await api.jurors.list(result.sessionId);
       setJurors(jurorsData.items);
+      
+      // Clear imported jurors
+      setImportedJurors([]);
       
       // Update URL
       window.history.replaceState({}, '', `?session=${result.sessionId}`);
@@ -146,6 +170,12 @@ function App() {
     } finally {
       setIsCreating(false);
     }
+  };
+
+  const handleImportComplete = (jurors: JurorDemographics[]) => {
+    setImportedJurors(jurors);
+    setConfig(c => ({ ...c, jurors: jurors.length }));
+    setShowImportModal(false);
   };
 
   const handleJurorClick = (juror: Participant) => {
@@ -264,13 +294,6 @@ function App() {
     }
   };
 
-  // Filter participants by tags
-  const filteredParticipants = tagFilters.length > 0
-    ? participants.filter(p => 
-        p.role !== 'juror' || 
-        (p.tags && tagFilters.some(tag => p.tags!.includes(tag)))
-      )
-    : participants;
 
   // Quick notes handlers
   const handleAddQuickNote = (note: Omit<QuickNote, 'id' | 'createdAt'>) => {
@@ -334,6 +357,7 @@ function App() {
               <div className="navbar-title">Voir Dire</div>
               <div className="navbar-subtitle">Washington State Public Defense</div>
             </div>
+            <ModeIndicator />
           </div>
         </nav>
 
@@ -353,6 +377,19 @@ function App() {
 
               <div className="setup-section">
                 <div className="setup-section-title">New Session</div>
+                <div className="form-row" style={{ marginBottom: 'var(--space-md)' }}>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label className="form-label">Session Name</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g., State v. Smith"
+                      value={newSessionName}
+                      onChange={(e) => setNewSessionName(e.target.value)}
+                    />
+                    <span className="form-hint">Case name or description</span>
+                  </div>
+                </div>
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Jurors</label>
@@ -405,14 +442,43 @@ function App() {
                     <span className="form-hint">Number of peremptory challenges allowed</span>
                   </div>
                 </div>
-                <button 
-                  className="btn btn-primary btn-lg" 
-                  onClick={handleCreateSession}
-                  disabled={isCreating}
-                  style={{ width: '100%' }}
-                >
-                  {isCreating ? 'Creating Session...' : 'Start New Session'}
-                </button>
+                {/* Import Status */}
+                {importedJurors.length > 0 && (
+                  <div className="import-status">
+                    <span className="import-status-icon">✓</span>
+                    <span className="import-status-text">
+                      {importedJurors.length} jurors imported from questionnaire
+                    </span>
+                    <button 
+                      className="import-status-clear"
+                      onClick={() => setImportedJurors([])}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+
+                <div className="session-actions">
+                  <button 
+                    className="btn btn-secondary"
+                    onClick={() => setShowImportModal(true)}
+                    style={{ flex: 1 }}
+                  >
+                    📄 Import Questionnaires
+                  </button>
+                  <button 
+                    className="btn btn-primary btn-lg" 
+                    onClick={handleCreateSession}
+                    disabled={isCreating}
+                    style={{ flex: 2 }}
+                  >
+                    {isCreating ? 'Creating Session...' : (
+                      importedJurors.length > 0 
+                        ? `Start with ${importedJurors.length} Jurors`
+                        : 'Start New Session'
+                    )}
+                  </button>
+                </div>
               </div>
 
               <div className="welcome-divider">
@@ -447,6 +513,14 @@ function App() {
             </div>
           </div>
         </main>
+
+        {/* Import Modal */}
+        {showImportModal && (
+          <JurorImport
+            onImport={handleImportComplete}
+            onCancel={() => setShowImportModal(false)}
+          />
+        )}
       </div>
     );
   }
@@ -465,12 +539,13 @@ function App() {
             <div className="navbar-title">Voir Dire</div>
             <div className="navbar-subtitle">Washington State Public Defense</div>
           </div>
+          <ModeIndicator />
         </div>
 
         <div className="navbar-session">
-          <div className="session-badge">
+          <div className="session-badge" title={`Session ID: ${currentSessionId}`}>
             <div className="session-indicator"></div>
-            <span className="session-text">{currentSessionId.slice(0, 8)}...</span>
+            <span className="session-text">{currentSessionName || currentSessionId.slice(0, 8)}</span>
           </div>
         </div>
 
@@ -523,10 +598,6 @@ function App() {
               </div>
             </div>
             <div className="toolbar-right">
-              <TagFilter 
-                selectedFilters={tagFilters}
-                onFiltersChange={setTagFilters}
-              />
               <button 
                 className="toolbar-btn"
                 onClick={() => {
@@ -537,7 +608,6 @@ function App() {
                     peremptoryUsed: 0,
                     causeChallenges: [],
                   });
-                  setTagFilters([]);
                   window.history.replaceState({}, '', window.location.pathname);
                 }}
               >
@@ -549,7 +619,7 @@ function App() {
           <div className="workspace-layout">
             <div className="workspace-main">
               <CourtroomLayout 
-                participants={filteredParticipants}
+                participants={participants}
                 jurorsPerRow={6}
                 onJurorClick={handleJurorClick}
                 onJurorStatusChange={handleUpdateJurorStatus}

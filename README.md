@@ -134,6 +134,7 @@ alembic upgrade head
 
 The React frontend provides a professional interface for criminal defense attorneys:
 
+- **Questionnaire Import**: Upload CSV exports from King County juror questionnaires to auto-populate juror data
 - **Courtroom Layout**: Visual representation of judge, counsel, and jury seating
 - **Juror Management**: Click jurors to view/edit notes, tags, and transcript segments
 - **Quick Assessment**: Mark jurors as favorable/unfavorable/flagged with one click
@@ -144,6 +145,28 @@ The React frontend provides a professional interface for criminal defense attorn
 - **Quick Notes**: Timestamped notes during proceedings with pause/resume
 - **Export Reports**: Export juror notes, transcript, or full report as text files
 - **Juror Tags**: Predefined and custom tags for categorizing jurors
+
+### Importing Juror Questionnaires
+
+The app supports importing juror data from the [King County juror questionnaire](https://www.courts.wa.gov/newsinfo/content/Sample%20Trial%20Documents/Jury%20Questionnaire.pdf):
+
+1. Export questionnaire responses as CSV from Microsoft Forms
+2. Click "Import Questionnaires" on the session creation screen
+3. Upload the CSV file - columns are auto-detected
+4. Review/adjust column mappings if needed
+5. Preview imported jurors and start session
+
+**Supported fields:**
+- Badge/Juror Number
+- First Name, Last Name
+- Age, City/Neighborhood
+- Occupation, Education Level
+- Gender, Race/Ethnicity
+- Prior Jury Service
+- Criminal Conviction
+- Phone, Email
+
+A sample CSV is provided at `resources/sample_jurors.csv` for testing.
 
 ## Technology Stack
 

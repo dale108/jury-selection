@@ -16,8 +16,19 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))))
 
 from shared.redis_client import redis_client, Channels
+from ..config import settings
 
 router = APIRouter(prefix="/transcripts", tags=["transcripts"])
+
+
+@router.get("/mode")
+async def get_transcription_mode():
+    """Get the current transcription mode (demo or live)."""
+    return {
+        "mode": "demo" if settings.use_sample_transcript else "live",
+        "demo_mode": settings.use_sample_transcript,
+        "description": "Using sample transcript file" if settings.use_sample_transcript else "Using OpenAI API for live transcription",
+    }
 
 
 @router.get("/", response_model=TranscriptList)

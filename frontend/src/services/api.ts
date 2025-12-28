@@ -171,6 +171,14 @@ export const api = {
       return response.data;
     },
   },
+
+  // System
+  system: {
+    getMode: async (): Promise<{ mode: 'demo' | 'live'; demo_mode: boolean; description: string }> => {
+      const response = await apiClient.get('/transcripts/mode');
+      return response.data;
+    },
+  },
 };
 
 export default api;

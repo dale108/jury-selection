@@ -109,9 +109,12 @@
 
 /* Compact custom tag badge */
 .tag-badge.custom {
-  background: var(--color-primary);
+  background: #6366f1; /* Indigo - distinct from predefined tags */
+  color: white;
   font-size: 0.625rem;
   font-weight: 700;
+  text-transform: uppercase;
+  border-radius: 4px;
 }
 
 .tag-grid {
@@ -329,8 +332,11 @@
   justify-content: center;
   width: 20px;
   height: 20px;
-  border-radius: var(--radius-sm);
+  border-radius: 4px;
   font-size: 0.75rem;
+  color: white;
+  font-weight: 600;
+  flex-shrink: 0;
 }
 
 /* ================================================

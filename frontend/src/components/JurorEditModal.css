@@ -467,6 +467,92 @@
 }
 
 /* ================================================
+   Questionnaire Section
+   ================================================ */
+.questionnaire-section {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.questionnaire-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.q-section {
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+
+.q-section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-md) 0;
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.q-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-md);
+}
+
+.q-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.q-field.full-width {
+  grid-column: span 2;
+}
+
+.q-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.q-value {
+  font-size: 0.9375rem;
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+.q-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  padding: var(--space-xs) var(--space-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+}
+
+.q-badge.yes {
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
+}
+
+.q-badge.no {
+  background: var(--color-bg-muted);
+  color: var(--color-text-muted);
+}
+
+.q-badge.alert {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+/* ================================================
    Responsive Design
    ================================================ */
 @media (max-width: 640px) {
@@ -484,5 +570,13 @@
   
   .status-btn span {
     display: none;
+  }
+  
+  .q-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .q-field.full-width {
+    grid-column: span 1;
   }
 }
