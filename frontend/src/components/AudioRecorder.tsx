@@ -18,6 +18,51 @@ export interface TranscriptSegment {
   confidence: number;
 }
 
+// WAV encoding utilities
+const SAMPLE_RATE = 16000;
+
+function encodeWAV(samples: Float32Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(buffer);
+
+  // RIFF header
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, 36 + samples.length * 2, true);
+  writeString(view, 8, 'WAVE');
+
+  // fmt chunk
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true); // Chunk size
+  view.setUint16(20, 1, true); // Audio format (PCM)
+  view.setUint16(22, 1, true); // Number of channels (mono)
+  view.setUint32(24, SAMPLE_RATE, true); // Sample rate
+  view.setUint32(28, SAMPLE_RATE * 2, true); // Byte rate
+  view.setUint16(32, 2, true); // Block align
+  view.setUint16(34, 16, true); // Bits per sample
+
+  // data chunk
+  writeString(view, 36, 'data');
+  view.setUint32(40, samples.length * 2, true);
+
+  // Write samples as 16-bit PCM
+  floatTo16BitPCM(view, 44, samples);
+
+  return buffer;
+}
+
+function writeString(view: DataView, offset: number, string: string): void {
+  for (let i = 0; i < string.length; i++) {
+    view.setUint8(offset + i, string.charCodeAt(i));
+  }
+}
+
+function floatTo16BitPCM(view: DataView, offset: number, samples: Float32Array): void {
+  for (let i = 0; i < samples.length; i++, offset += 2) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  }
+}
+
 export const AudioRecorder: React.FC<AudioRecorderProps> = ({
   sessionId,
   onRecordingStart,
@@ -31,14 +76,19 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
   const [audioLevel, setAudioLevel] = useState(0);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
   const audioWebSocketRef = useRef<WebSocket | null>(null);
   const transcriptWebSocketRef = useRef<WebSocket | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const durationIntervalRef = useRef<number | null>(null);
   const levelIntervalRef = useRef<number | null>(null);
+  const isPausedRef = useRef<boolean>(false);
+  
+  // Buffer to accumulate audio samples
+  const audioBufferRef = useRef<Float32Array[]>([]);
+  const bufferIntervalRef = useRef<number | null>(null);
 
   const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -95,27 +145,55 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
     transcriptWebSocketRef.current = ws;
   }, [sessionId, isRecording, onTranscriptUpdate]);
 
+  // Send buffered audio as WAV
+  const sendBufferedAudio = useCallback(() => {
+    const ws = audioWebSocketRef.current;
+    const buffers = audioBufferRef.current;
+    
+    if (!ws || ws.readyState !== WebSocket.OPEN || buffers.length === 0) {
+      return;
+    }
+
+    // Combine all buffered samples
+    const totalLength = buffers.reduce((sum, buf) => sum + buf.length, 0);
+    const combinedSamples = new Float32Array(totalLength);
+    let offset = 0;
+    for (const buf of buffers) {
+      combinedSamples.set(buf, offset);
+      offset += buf.length;
+    }
+
+    // Clear buffer
+    audioBufferRef.current = [];
+
+    // Encode as WAV and send
+    const wavBuffer = encodeWAV(combinedSamples);
+    ws.send(wavBuffer);
+  }, []);
+
   const startRecording = async () => {
     try {
-      // Request microphone access
+      // Request microphone access with specific constraints
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           channelCount: 1,
-          sampleRate: 16000,
+          sampleRate: SAMPLE_RATE,
           echoCancellation: true,
           noiseSuppression: true,
         },
       });
       streamRef.current = stream;
 
-      // Set up audio analysis for level meter
-      audioContextRef.current = new AudioContext();
+      // Set up audio context with desired sample rate
+      audioContextRef.current = new AudioContext({ sampleRate: SAMPLE_RATE });
       const source = audioContextRef.current.createMediaStreamSource(stream);
+      
+      // Set up analyser for level meter
       analyserRef.current = audioContextRef.current.createAnalyser();
       analyserRef.current.fftSize = 256;
       source.connect(analyserRef.current);
 
-      // Connect to audio WebSocket
+      // Connect to audio WebSocket first
       setConnectionStatus('connecting');
       const wsUrl = getWebSocketUrl(`/api/audio/stream/${sessionId}`);
       const ws = new WebSocket(wsUrl);
@@ -124,19 +202,32 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
         console.log('Audio WebSocket connected');
         setConnectionStatus('connected');
         
-        // Start MediaRecorder
-        const mediaRecorder = new MediaRecorder(stream, {
-          mimeType: 'audio/webm;codecs=opus',
-        });
-
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
-            ws.send(event.data);
-          }
+        // Set up ScriptProcessorNode for raw PCM capture
+        // Buffer size of 4096 at 16kHz = ~256ms per callback
+        const processor = audioContextRef.current!.createScriptProcessor(4096, 1, 1);
+        processorRef.current = processor;
+        
+        processor.onaudioprocess = (e) => {
+          if (isPausedRef.current) return;
+          
+          // Get input data (mono channel)
+          const inputData = e.inputBuffer.getChannelData(0);
+          // Clone the data since the buffer gets reused
+          const samples = new Float32Array(inputData.length);
+          samples.set(inputData);
+          
+          // Add to buffer
+          audioBufferRef.current.push(samples);
         };
-
-        mediaRecorder.start(1000); // Send chunks every second
-        mediaRecorderRef.current = mediaRecorder;
+        
+        // Connect the processor (need to connect to destination for it to work)
+        source.connect(processor);
+        processor.connect(audioContextRef.current!.destination);
+        
+        // Send buffered audio every second as WAV chunks
+        bufferIntervalRef.current = window.setInterval(() => {
+          sendBufferedAudio();
+        }, 1000);
         
         setIsRecording(true);
         onRecordingStart?.();
@@ -189,10 +280,23 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
   };
 
   const stopRecording = () => {
-    // Stop MediaRecorder
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
+    // Send any remaining buffered audio
+    sendBufferedAudio();
+
+    // Disconnect processor
+    if (processorRef.current) {
+      processorRef.current.disconnect();
+      processorRef.current = null;
     }
+
+    // Clear buffer interval
+    if (bufferIntervalRef.current) {
+      clearInterval(bufferIntervalRef.current);
+      bufferIntervalRef.current = null;
+    }
+
+    // Clear audio buffer
+    audioBufferRef.current = [];
 
     // Close audio WebSocket
     if (audioWebSocketRef.current) {
@@ -233,15 +337,13 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
   };
 
   const togglePause = () => {
-    if (!mediaRecorderRef.current) return;
-
     if (isPaused) {
-      mediaRecorderRef.current.resume();
+      isPausedRef.current = false;
       durationIntervalRef.current = window.setInterval(() => {
         setDuration(d => d + 1);
       }, 1000);
     } else {
-      mediaRecorderRef.current.pause();
+      isPausedRef.current = true;
       if (durationIntervalRef.current) {
         clearInterval(durationIntervalRef.current);
       }
@@ -334,4 +436,3 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
     </div>
   );
 };
-

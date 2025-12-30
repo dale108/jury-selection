@@ -62,6 +62,50 @@
   gap: var(--space-md);
 }
 
+/* Navigation Controls */
+.modal-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-right: var(--space-sm);
+  padding-right: var(--space-md);
+  border-right: 1px solid var(--color-border);
+}
+
+.modal-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  transition: all var(--transition-fast);
+}
+
+.modal-nav-btn:hover:not(:disabled) {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.modal-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.modal-nav-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.modal-nav-count {
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--color-text-muted);
+  min-width: 48px;
+  text-align: center;
+}
+
 .juror-badge {
   display: flex;
   align-items: center;

@@ -18,8 +18,6 @@ export const CourtroomLayout: React.FC<CourtroomLayoutProps> = ({
   jurorsPerRow = 6,
   onJurorClick,
   onJurorStatusChange,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onTagsChange: _onTagsChange,
   onChallengeJuror,
   onRemoveChallenge,
 }) => {
@@ -159,6 +157,16 @@ export const CourtroomLayout: React.FC<CourtroomLayoutProps> = ({
                   key={juror.id} 
                   className={`juror-card ${getStatusClass(juror.status)} ${juror.notes ? 'has-notes' : ''} ${juror.challenged ? 'challenged' : ''}`}
                   onClick={() => !juror.challenged && onJurorClick?.(juror)}
+                  onKeyDown={(e) => {
+                    if ((e.key === 'Enter' || e.key === ' ') && !juror.challenged) {
+                      e.preventDefault();
+                      onJurorClick?.(juror);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={juror.challenged ? -1 : 0}
+                  aria-label={`Juror ${juror.seatNumber}: ${juror.name}${juror.status ? `, marked as ${juror.status}` : ''}${juror.challenged ? `, ${juror.challenged === 'peremptory' ? 'struck' : 'challenged for cause'}` : ''}`}
+                  aria-disabled={!!juror.challenged}
                 >
                   {/* Challenge Overlay */}
                   {juror.challenged && (
@@ -205,6 +213,11 @@ export const CourtroomLayout: React.FC<CourtroomLayoutProps> = ({
                     </div>
                   </div>
                   <div className="juror-name">{juror.name}</div>
+                  {juror.occupation && (
+                    <div className="juror-occupation" title={juror.occupation}>
+                      {juror.occupation}
+                    </div>
+                  )}
                   
                   {/* Quick Status Buttons */}
                   {!juror.challenged && (
@@ -213,8 +226,10 @@ export const CourtroomLayout: React.FC<CourtroomLayoutProps> = ({
                         className={`quick-btn favorable ${juror.status === 'favorable' ? 'active' : ''}`}
                         onClick={(e) => handleQuickStatus(e, juror, 'favorable')}
                         title="Mark as favorable"
+                        aria-label={`Mark ${juror.name} as favorable`}
+                        aria-pressed={juror.status === 'favorable'}
                       >
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true">
                           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                         </svg>
                       </button>
@@ -222,8 +237,10 @@ export const CourtroomLayout: React.FC<CourtroomLayoutProps> = ({
                         className={`quick-btn unfavorable ${juror.status === 'unfavorable' ? 'active' : ''}`}
                         onClick={(e) => handleQuickStatus(e, juror, 'unfavorable')}
                         title="Mark as unfavorable"
+                        aria-label={`Mark ${juror.name} as unfavorable`}
+                        aria-pressed={juror.status === 'unfavorable'}
                       >
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true">
                           <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/>
                         </svg>
                       </button>
@@ -231,8 +248,10 @@ export const CourtroomLayout: React.FC<CourtroomLayoutProps> = ({
                         className={`quick-btn flagged ${juror.status === 'flagged' ? 'active' : ''}`}
                         onClick={(e) => handleQuickStatus(e, juror, 'flagged')}
                         title="Flag for review"
+                        aria-label={`Flag ${juror.name} for review`}
+                        aria-pressed={juror.status === 'flagged'}
                       >
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true">
                           <path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/>
                         </svg>
                       </button>
@@ -240,8 +259,9 @@ export const CourtroomLayout: React.FC<CourtroomLayoutProps> = ({
                         className="quick-btn strike"
                         onClick={(e) => handleStrike(e, juror)}
                         title="Strike juror (peremptory)"
+                        aria-label={`Strike ${juror.name} with peremptory challenge`}
                       >
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true">
                           <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/>
                         </svg>
                       </button>

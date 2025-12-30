@@ -30,6 +30,12 @@ interface JurorEditModalProps {
   sessionId?: string | null;
   onStatusChange?: (jurorId: string, status: Participant['status']) => void;
   onTagsChange?: (jurorId: string, tags: string[]) => void;
+  // Navigation props
+  onNavigate?: (direction: 'prev' | 'next') => void;
+  canNavigatePrev?: boolean;
+  canNavigateNext?: boolean;
+  currentIndex?: number;
+  totalJurors?: number;
 }
 
 export const JurorEditModal: React.FC<JurorEditModalProps> = ({
@@ -42,6 +48,11 @@ export const JurorEditModal: React.FC<JurorEditModalProps> = ({
   sessionId = null,
   onStatusChange,
   onTagsChange,
+  onNavigate,
+  canNavigatePrev = false,
+  canNavigateNext = false,
+  currentIndex = -1,
+  totalJurors = 0,
 }) => {
   const [notes, setNotes] = useState('');
   const [tags, setTags] = useState<string[]>([]);
@@ -152,13 +163,43 @@ export const JurorEditModal: React.FC<JurorEditModalProps> = ({
         {/* Modal Header */}
         <div className="modal-header">
           <div className="modal-header-content">
+            {/* Navigation Arrows */}
+            {onNavigate && totalJurors > 1 && (
+              <div className="modal-nav">
+                <button 
+                  className="modal-nav-btn"
+                  onClick={() => onNavigate('prev')}
+                  disabled={!canNavigatePrev}
+                  aria-label="Previous juror"
+                  title="Previous juror"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M15 18l-6-6 6-6"/>
+                  </svg>
+                </button>
+                <span className="modal-nav-count">
+                  {currentIndex + 1} / {totalJurors}
+                </span>
+                <button 
+                  className="modal-nav-btn"
+                  onClick={() => onNavigate('next')}
+                  disabled={!canNavigateNext}
+                  aria-label="Next juror"
+                  title="Next juror"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 18l6-6-6-6"/>
+                  </svg>
+                </button>
+              </div>
+            )}
             <div className="juror-badge">#{juror.seatNumber}</div>
             <div className="modal-title-group">
               <h2 className="modal-title">{juror.name}</h2>
               <span className="modal-subtitle">Juror Profile</span>
             </div>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>
+          <button className="modal-close-btn" onClick={onClose} aria-label="Close modal">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 6L6 18M6 6l12 12"/>
             </svg>

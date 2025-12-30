@@ -37,3 +37,13 @@ class SessionStatusEvent(BaseModel):
     new_status: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
+
+class RecordingCompleteEvent(BaseModel):
+    """Event published when a recording is complete and ready for transcription."""
+    event_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    session_id: str
+    recording_id: str
+    file_path: str
+    duration_seconds: float
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+

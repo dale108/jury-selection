@@ -60,11 +60,14 @@ export const SpeakerMappingPanel: React.FC<SpeakerMappingPanelProps> = ({
 
     try {
       const session = await api.sessions.get(sessionId);
-      const mappings = session.metadata?.speaker_mappings || [];
+      const metadata = session.metadata as Record<string, unknown> | undefined;
+      const mappings = (metadata?.speaker_mappings as ParticipantMapping[] | undefined) || [];
       const mappingMap = new Map<string, ParticipantMapping>();
-      mappings.forEach((m: ParticipantMapping) => {
-        mappingMap.set(m.speaker_label, m);
-      });
+      if (Array.isArray(mappings)) {
+        mappings.forEach((m: ParticipantMapping) => {
+          mappingMap.set(m.speaker_label, m);
+        });
+      }
       setParticipantMappings(mappingMap);
     } catch (err) {
       console.error('Failed to load participant mappings:', err);

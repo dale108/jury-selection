@@ -1,19 +1,110 @@
-import axios from 'axios';
+/**
+ * API Service - Centralized API client with error handling
+ */
+import axios, { AxiosError } from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
+// Custom error class for API errors
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+  details?: unknown;
+
+  constructor(message: string, status: number, code?: string, details?: unknown) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+    this.details = details;
+  }
+}
+
+// Error message mapping for user-friendly messages
+const ERROR_MESSAGES: Record<number, string> = {
+  400: 'Invalid request. Please check your input.',
+  401: 'You are not authorized. Please log in.',
+  403: 'You do not have permission to perform this action.',
+  404: 'The requested resource was not found.',
+  409: 'This operation conflicts with existing data.',
+  422: 'The provided data is invalid.',
+  429: 'Too many requests. Please try again later.',
+  500: 'An unexpected server error occurred.',
+  502: 'The server is temporarily unavailable.',
+  503: 'Service is currently unavailable. Please try again later.',
+};
+
+// Parse error response for user-friendly message
+const parseErrorMessage = (error: AxiosError): string => {
+  if (!error.response) {
+    if (error.code === 'ECONNABORTED') {
+      return 'Request timed out. Please check your connection.';
+    }
+    if (error.code === 'ERR_NETWORK') {
+      return 'Unable to connect to server. Please check your connection.';
+    }
+    return 'An unexpected error occurred. Please try again.';
+  }
+
+  const { status, data } = error.response;
+  
+  // Try to extract message from response data
+  if (typeof data === 'object' && data !== null) {
+    const responseData = data as Record<string, unknown>;
+    
+    // FastAPI standard error format
+    if (typeof responseData.detail === 'string') {
+      return responseData.detail;
+    }
+    
+    // Pydantic validation errors
+    if (Array.isArray(responseData.detail)) {
+      const messages = responseData.detail
+        .map((err: { msg?: string; message?: string }) => err.msg || err.message)
+        .filter(Boolean);
+      if (messages.length > 0) {
+        return messages.join('. ');
+      }
+    }
+    
+    if (typeof responseData.message === 'string') {
+      return responseData.message;
+    }
+  }
+
+  return ERROR_MESSAGES[status] || `Request failed with status ${status}`;
+};
+
+// Create axios instance
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000, // 30 second timeout
 });
 
+// Response interceptor for error handling
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    const message = parseErrorMessage(error);
+    const status = error.response?.status || 0;
+    const code = error.code;
+    const details = error.response?.data;
+
+    console.error(`API Error [${status}]:`, message, details);
+
+    throw new ApiError(message, status, code, details);
+  }
+);
+
+// Type definitions
 export interface SessionCreate {
   case_number: string;
   case_name: string;
   court: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface SessionResponse {
@@ -24,7 +115,7 @@ export interface SessionResponse {
   status: string;
   started_at?: string;
   ended_at?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -37,8 +128,8 @@ export interface JurorCreate {
   occupation?: string;
   neighborhood?: string;
   notes?: string;
-  demographics?: Record<string, any>;
-  flags?: Record<string, any>;
+  demographics?: Record<string, unknown>;
+  flags?: Record<string, unknown>;
 }
 
 export interface JurorUpdate {
@@ -48,8 +139,8 @@ export interface JurorUpdate {
   occupation?: string;
   neighborhood?: string;
   notes?: string;
-  demographics?: Record<string, any>;
-  flags?: Record<string, any>;
+  demographics?: Record<string, unknown>;
+  flags?: Record<string, unknown>;
 }
 
 export interface JurorResponse {
@@ -61,8 +152,8 @@ export interface JurorResponse {
   occupation?: string;
   neighborhood?: string;
   notes?: string;
-  demographics?: Record<string, any>;
-  flags?: Record<string, any>;
+  demographics?: Record<string, unknown>;
+  flags?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -93,6 +184,21 @@ export interface TranscriptByJuror {
   total_speaking_time: number;
 }
 
+export interface SpeakerMappingResponse {
+  id: string;
+  session_id: string;
+  juror_id: string;
+  speaker_label: string;
+  created_at: string;
+}
+
+export interface SystemModeResponse {
+  mode: 'demo' | 'live';
+  demo_mode: boolean;
+  description: string;
+}
+
+// API methods
 export const api = {
   // Sessions
   sessions: {
@@ -166,16 +272,16 @@ export const api = {
 
   // Speaker Mappings
   speakerMappings: {
-    list: async (sessionId: string): Promise<{ id: string; session_id: string; juror_id: string; speaker_label: string; created_at: string }[]> => {
-      const response = await apiClient.get(`/jurors/session/${sessionId}/speaker-mappings`);
+    list: async (sessionId: string): Promise<SpeakerMappingResponse[]> => {
+      const response = await apiClient.get<SpeakerMappingResponse[]>(`/jurors/session/${sessionId}/speaker-mappings`);
       return response.data;
     },
   },
 
   // System
   system: {
-    getMode: async (): Promise<{ mode: 'demo' | 'live'; demo_mode: boolean; description: string }> => {
-      const response = await apiClient.get('/transcripts/mode');
+    getMode: async (): Promise<SystemModeResponse> => {
+      const response = await apiClient.get<SystemModeResponse>('/transcripts/mode');
       return response.data;
     },
   },

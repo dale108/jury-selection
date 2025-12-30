@@ -139,6 +139,8 @@ export const createSessionWithJurors = async (
       backendJurorId: juror.id,
       sessionId: session.id,
       notes: juror.notes || undefined,
+      occupation: juror.occupation || undefined,
+      neighborhood: juror.neighborhood || undefined,
     });
   });
 
@@ -194,6 +196,8 @@ export const loadSessionWithJurors = async (
       backendJurorId: juror.id,
       sessionId: session.id,
       notes: juror.notes || undefined,
+      occupation: juror.occupation || undefined,
+      neighborhood: juror.neighborhood || undefined,
     });
   });
 

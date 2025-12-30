@@ -1,0 +1,140 @@
+/* ================================================
+   ERROR BOUNDARY - Professional Error Display
+   ================================================ */
+
+.error-boundary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--space-xl);
+  background: var(--color-bg);
+}
+
+.error-boundary-content {
+  max-width: 480px;
+  text-align: center;
+}
+
+.error-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto var(--space-lg);
+  color: var(--color-danger);
+}
+
+.error-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.error-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 var(--space-sm) 0;
+}
+
+.error-message {
+  font-size: 1rem;
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-xl) 0;
+  line-height: 1.6;
+}
+
+.error-actions {
+  display: flex;
+  gap: var(--space-md);
+  justify-content: center;
+}
+
+.error-btn {
+  padding: var(--space-sm) var(--space-lg);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.error-btn-primary {
+  background: var(--color-primary);
+  color: white;
+  border: none;
+}
+
+.error-btn-primary:hover {
+  background: var(--color-primary-light);
+}
+
+.error-btn-secondary {
+  background: var(--color-bg-elevated);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.error-btn-secondary:hover {
+  background: var(--color-bg-muted);
+  border-color: var(--color-border-strong);
+}
+
+.error-details {
+  margin-top: var(--space-xl);
+  text-align: left;
+}
+
+.error-details summary {
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-sm);
+}
+
+.error-stack {
+  background: var(--color-bg-muted);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-danger);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Component-level error */
+.component-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+  background: var(--color-bg-muted);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-border);
+  gap: var(--space-sm);
+}
+
+.component-error-text {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.component-error-btn {
+  padding: var(--space-xs) var(--space-md);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-primary);
+  background: transparent;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.component-error-btn:hover {
+  background: var(--color-primary);
+  color: white;
+}
+

@@ -312,3 +312,60 @@ async def load_sample_transcript(
         "duration_seconds": max(seg["end"] for seg in segments),
     }
 
+
+@router.post("/retranscribe/{session_id}/{recording_id}")
+async def retranscribe_recording(
+    session_id: uuid.UUID,
+    recording_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Re-transcribe an existing recording.
+    Useful for testing transcription after code changes.
+    """
+    from ..core.processor import TranscriptionProcessor
+    from shared.schemas.events import RecordingCompleteEvent
+    
+    # Get recording info from MinIO path pattern
+    file_path = f"sessions/{session_id}/recordings/{recording_id}.webm"
+    
+    # Create a mock event
+    event = RecordingCompleteEvent(
+        session_id=str(session_id),
+        recording_id=str(recording_id),
+        file_path=file_path,
+        duration_seconds=0,  # Will be determined from audio
+    )
+    
+    # Delete existing transcripts for this recording
+    await db.execute(
+        select(TranscriptSegment)
+        .where(TranscriptSegment.audio_recording_id == recording_id)
+    )
+    from sqlalchemy import delete
+    await db.execute(
+        delete(TranscriptSegment)
+        .where(TranscriptSegment.audio_recording_id == recording_id)
+    )
+    await db.commit()
+    
+    # Process the recording
+    processor = TranscriptionProcessor(db)
+    segments = await processor.process_recording(event)
+    
+    return {
+        "message": "Retranscription complete",
+        "session_id": str(session_id),
+        "recording_id": str(recording_id),
+        "segments_created": len(segments),
+        "segments": [
+            {
+                "speaker": seg.speaker_label,
+                "content": seg.content[:100] + "..." if len(seg.content) > 100 else seg.content,
+                "start_time": seg.start_time,
+                "end_time": seg.end_time,
+            }
+            for seg in segments
+        ]
+    }
+

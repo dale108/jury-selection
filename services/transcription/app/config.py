@@ -27,12 +27,8 @@ class Settings(BaseSettings):
     # OpenAI
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     
-    # Hugging Face (for pyannote)
-    hf_auth_token: str = os.getenv("HF_AUTH_TOKEN", "")
-    
-    # Transcription settings
-    whisper_model: str = "whisper-1"
-    diarization_enabled: bool = True
+    # Transcription model (GPT-4o with diarization)
+    transcription_model: str = "gpt-4o-transcribe-diarize"
     
     # Mock mode - use sample transcript instead of API
     use_sample_transcript: bool = os.getenv("USE_SAMPLE_TRANSCRIPT", "false").lower() == "true"

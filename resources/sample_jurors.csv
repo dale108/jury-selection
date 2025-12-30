@@ -1,0 +1,14 @@
+Juror Badge Number,Last Name,First Name,Phone Number,Email,City,Age,Education Level,Category (Race/Ethnicity),Gender,Criminal Conviction,Occupation,Prior Jury Service
+J-001,Martinez,Maria,206-555-1234,mmartinez@email.com,Seattle,42,Bachelor's degree,Hispanic Latino or Spanish origin,Female,No,"Registered Nurse, Swedish Medical",Yes
+J-002,Johnson,Robert,425-555-2345,rjohnson@email.com,Bellevue,55,Master's degree,Caucasian,Male,No,Software Engineering Manager,Yes
+J-003,Williams,Tanya,206-555-3456,twill@email.com,Renton,28,Some college no degree,Black or African American,Female,No,Administrative Assistant,No
+J-004,Chen,David,253-555-4567,dchen@email.com,Kent,36,Professional degree (JD),Asian,Male,No,"Attorney, Private Practice",No
+J-005,Thompson,James,206-555-5678,jthompson@email.com,Seattle,61,High school degree,Caucasian,Male,Yes,Retired Electrician,Yes
+J-006,Patel,Priya,425-555-6789,ppatel@email.com,Redmond,33,Doctorate (PhD),Asian,Female,No,Research Scientist,No
+J-007,Garcia,Carlos,206-555-7890,cgarcia@email.com,Burien,45,Associate degree,Hispanic Latino or Spanish origin,Male,No,Small Business Owner,Yes
+J-008,Kim,Jennifer,253-555-8901,jkim@email.com,Federal Way,29,Bachelor's degree,Asian,Female,No,Marketing Coordinator,No
+J-009,Brown,Michael,206-555-9012,mbrown@email.com,Seattle,52,Master's degree,Black or African American,Male,No,High School Teacher,Yes
+J-010,Anderson,Linda,425-555-0123,landerson@email.com,Kirkland,67,Bachelor's degree,Caucasian,Female,No,Retired Social Worker,Yes
+J-011,Nguyen,Thomas,206-555-1111,tnguyen@email.com,Seattle,38,Bachelor's degree,Asian,Male,No,Civil Engineer,No
+J-012,Wilson,Sarah,253-555-2222,swilson@email.com,Auburn,24,Some college no degree,Caucasian,Female,No,Retail Manager,No
+

@@ -27,7 +27,10 @@ export const QuickNotes: React.FC<QuickNotesProps> = ({
   const [noteText, setNoteText] = useState('');
   const [selectedJurorId, setSelectedJurorId] = useState<string>('');
   const [currentTime, setCurrentTime] = useState(0);
+  const [showAllNotes, setShowAllNotes] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  const MAX_VISIBLE_NOTES = 5;
 
   // Update current time every second when not paused
   useEffect(() => {
@@ -184,26 +187,41 @@ export const QuickNotes: React.FC<QuickNotesProps> = ({
                 <span>Type a quick note above and press Enter</span>
               </div>
             ) : (
-              notes
-                .sort((a, b) => b.timestamp - a.timestamp)
-                .map(note => (
-                  <div key={note.id} className="note-item">
-                    <div className="note-timestamp">[{formatTime(note.timestamp)}]</div>
-                    <div className="note-content">
-                      {note.jurorId && (
-                        <span className="note-juror">{getJurorName(note.jurorId)}</span>
-                      )}
-                      {note.content}
+              <>
+                {notes
+                  .sort((a, b) => b.timestamp - a.timestamp)
+                  .slice(0, showAllNotes ? undefined : MAX_VISIBLE_NOTES)
+                  .map(note => (
+                    <div key={note.id} className="note-item">
+                      <div className="note-timestamp">[{formatTime(note.timestamp)}]</div>
+                      <div className="note-content">
+                        {note.jurorId && (
+                          <span className="note-juror">{getJurorName(note.jurorId)}</span>
+                        )}
+                        {note.content}
+                      </div>
+                      <button 
+                        className="delete-note-btn"
+                        onClick={() => onDeleteNote(note.id)}
+                        title="Delete note"
+                        aria-label="Delete note"
+                      >
+                        ×
+                      </button>
                     </div>
-                    <button 
-                      className="delete-note-btn"
-                      onClick={() => onDeleteNote(note.id)}
-                      title="Delete note"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))
+                  ))}
+                {notes.length > MAX_VISIBLE_NOTES && (
+                  <button 
+                    className="show-all-btn"
+                    onClick={() => setShowAllNotes(!showAllNotes)}
+                  >
+                    {showAllNotes 
+                      ? 'Show less' 
+                      : `Show all ${notes.length} notes`
+                    }
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -106,6 +106,10 @@ services:
       - POSTGRES_DB=${POSTGRES_DB:-voirdire}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - MINIO_HOST=minio
+      - MINIO_PORT=9000
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - HF_AUTH_TOKEN=${HF_AUTH_TOKEN}
       - USE_SAMPLE_TRANSCRIPT=${USE_SAMPLE_TRANSCRIPT:-true}
@@ -115,6 +119,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio:
+        condition: service_started
 
   juror:
     build:

@@ -71,10 +71,12 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
       let participantMappings: Map<string, any> = new Map();
       try {
         const session = await api.sessions.get(sessionId);
-        const mappings = session.metadata?.speaker_mappings || [];
-        mappings.forEach((m: any) => {
-          participantMappings.set(m.speaker_label, m);
-        });
+        const mappings = session.metadata?.speaker_mappings;
+        if (Array.isArray(mappings)) {
+          mappings.forEach((m: any) => {
+            participantMappings.set(m.speaker_label, m);
+          });
+        }
       } catch (err) {
         console.error('Failed to load participant mappings:', err);
       }

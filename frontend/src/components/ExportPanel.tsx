@@ -133,10 +133,11 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
         }
         
         // Check session metadata for counsel mappings
-        const metadata = sessionData.metadata || {};
-        if (metadata.speakerMappings) {
-          const counselMapping = metadata.speakerMappings[speakerLabel];
-          if (counselMapping) {
+        const metadata = sessionData.metadata as Record<string, unknown> || {};
+        const speakerMappingsMeta = metadata.speakerMappings as Record<string, { displayName?: string }> | undefined;
+        if (speakerMappingsMeta && speakerMappingsMeta[speakerLabel]) {
+          const counselMapping = speakerMappingsMeta[speakerLabel];
+          if (counselMapping?.displayName) {
             return counselMapping.displayName;
           }
         }

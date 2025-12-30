@@ -1,8 +1,10 @@
 """Audio service API routes."""
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, WebSocket
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+import io
 
 from ..database import get_db
 from ..models import AudioRecording, AudioChunk
@@ -93,6 +95,48 @@ async def get_recording_url(
     try:
         url = await audio_storage.get_presigned_url(recording.file_path)
         return {"download_url": url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/recordings/{session_id}/{recording_id}/file")
+async def download_recording_file(
+    session_id: uuid.UUID,
+    recording_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Download the actual recording file (WAV audio)."""
+    result = await db.execute(
+        select(AudioRecording).where(
+            AudioRecording.id == recording_id,
+            AudioRecording.session_id == session_id,
+        )
+    )
+    recording = result.scalar_one_or_none()
+    
+    if not recording:
+        raise HTTPException(status_code=404, detail="Recording not found")
+    
+    try:
+        audio_data = await audio_storage.get_audio(recording.file_path)
+        if not audio_data:
+            raise HTTPException(status_code=404, detail="Audio file not found in storage")
+        
+        # Determine content type based on file extension
+        is_wav = recording.file_path.endswith(".wav")
+        media_type = "audio/wav" if is_wav else "audio/webm"
+        extension = ".wav" if is_wav else ".webm"
+        
+        return StreamingResponse(
+            io.BytesIO(audio_data),
+            media_type=media_type,
+            headers={
+                "Content-Disposition": f"attachment; filename={recording_id}{extension}",
+                "Content-Length": str(len(audio_data)),
+            }
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

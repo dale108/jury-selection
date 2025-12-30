@@ -19,7 +19,7 @@ class AudioProcessor:
     async def create_recording(self, session_id: uuid.UUID) -> AudioRecording:
         """Create a new audio recording entry."""
         recording_id = uuid.uuid4()
-        file_path = f"sessions/{session_id}/recordings/{recording_id}.webm"
+        file_path = f"sessions/{session_id}/recordings/{recording_id}.wav"
         
         recording = AudioRecording(
             id=recording_id,
@@ -42,7 +42,7 @@ class AudioProcessor:
     ) -> AudioChunk:
         """Save an audio chunk to storage and database."""
         chunk_id = uuid.uuid4()
-        file_path = f"sessions/{session_id}/chunks/{recording_id}/{chunk_index}.webm"
+        file_path = f"sessions/{session_id}/chunks/{recording_id}/{chunk_index}.wav"
         
         # Upload to MinIO
         await audio_storage.upload_audio(file_path, audio_data)
@@ -60,6 +60,18 @@ class AudioProcessor:
         await self.db.commit()
         await self.db.refresh(chunk)
         return chunk
+    
+    async def save_complete_recording(
+        self,
+        recording_id: uuid.UUID,
+        session_id: uuid.UUID,
+        audio_data: bytes,
+        file_path: str,
+    ) -> None:
+        """Save the complete recording file to storage."""
+        print(f"AudioProcessor: Saving complete recording to {file_path}", flush=True)
+        await audio_storage.upload_audio(file_path, audio_data)
+        print(f"AudioProcessor: Saved {len(audio_data)} bytes", flush=True)
     
     async def finalize_recording(
         self,

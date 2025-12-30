@@ -206,3 +206,50 @@ curl -X POST http://localhost:8000/api/jurors/$JUROR/speaker-mapping \
 curl -s http://localhost:8000/api/jurors/$JUROR | jq '{name: "\(.first_name) \(.last_name)", segments: .transcript_segments | length}'
 ```
 
+## Docker Debugging Commands
+
+### View service logs (follow mode)
+```bash
+# Transcription service logs
+docker logs -f voir-dire-transcription-1
+
+# Audio service logs
+docker logs -f voir-dire-audio-1
+
+# Gateway logs
+docker logs -f voir-dire-gateway-1
+
+# All services at once
+docker compose logs -f
+```
+
+### View last N lines of logs
+```bash
+docker logs voir-dire-transcription-1 --tail 50
+```
+
+### Check service status
+```bash
+docker compose ps
+```
+
+### Restart a specific service
+```bash
+docker compose restart transcription
+```
+
+### Rebuild and restart a service
+```bash
+docker compose up -d transcription --build
+```
+
+### Access PostgreSQL
+```bash
+docker exec -it voir-dire-postgres-1 psql -U voirdire -d voirdire
+```
+
+### Check MinIO buckets
+```bash
+docker exec voir-dire-minio-1 mc ls local/
+```
+

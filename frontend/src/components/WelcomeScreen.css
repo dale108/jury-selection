@@ -1,0 +1,124 @@
+/* ================================================
+   WELCOME SCREEN - Additional Styles
+   Base styles are in App.css, these are enhancements
+   ================================================ */
+
+/* Recent Sessions */
+.recent-sessions {
+  margin-bottom: var(--space-lg);
+}
+
+.recent-sessions-label {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-sm);
+}
+
+.recent-sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.recent-session-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+}
+
+.recent-session-btn:hover:not(:disabled) {
+  background: var(--color-bg-muted);
+  border-color: var(--color-primary-light);
+}
+
+.recent-session-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.recent-session-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.recent-session-name {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 70%;
+}
+
+.recent-session-date {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+/* Loading skeleton for recent sessions */
+.recent-sessions-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.recent-session-skeleton {
+  height: 44px;
+  background: linear-gradient(90deg, var(--color-bg-muted) 25%, var(--color-bg) 50%, var(--color-bg-muted) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-md);
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Empty state for no recent sessions */
+.recent-sessions-empty {
+  padding: var(--space-md);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-border);
+}
+
+/* Keyboard shortcut hints */
+.keyboard-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-left: var(--space-sm);
+  font-size: 0.75rem;
+  color: var(--color-text-light);
+}
+
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--space-xs);
+  background: var(--color-bg-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+

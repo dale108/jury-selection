@@ -6,7 +6,6 @@ from fastapi import FastAPI
 from .database import init_db, AsyncSessionLocal
 from .api.routes import router
 from .core.processor import ChunkSubscriber
-from .core.diarization import diarization_pipeline
 
 import sys
 import os
@@ -26,10 +25,6 @@ async def lifespan(app: FastAPI):
     # Startup
     await init_db()
     await redis_client.connect()
-    
-    # Initialize diarization pipeline (can be slow, do it on startup)
-    # This is optional - will initialize lazily if not done here
-    # await diarization_pipeline.initialize()
     
     # Start chunk subscriber in background
     subscriber = ChunkSubscriber(AsyncSessionLocal)
