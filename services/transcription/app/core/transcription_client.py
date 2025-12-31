@@ -46,6 +46,12 @@ class TranscriptionClient:
         
         print(f"TranscriptionClient: Wrote {len(audio_data)} bytes to {temp_path}", flush=True)
         
+        # Log WAV header info for debugging
+        if len(audio_data) >= 12:
+            is_riff = audio_data[:4] == b'RIFF'
+            is_wave = audio_data[8:12] == b'WAVE'
+            print(f"TranscriptionClient: WAV check - RIFF={is_riff}, WAVE={is_wave}", flush=True)
+        
         try:
             with open(temp_path, 'rb') as audio_file:
                 print(f"TranscriptionClient: Calling API with model={self.model}", flush=True)
@@ -55,7 +61,7 @@ class TranscriptionClient:
                     file=audio_file,
                     language=language,
                     response_format="diarized_json",
-                    extra_body={"chunking_strategy": "auto"},
+                    chunking_strategy="auto",
                 )
                 
                 print(f"TranscriptionClient: Got response", flush=True)
@@ -104,4 +110,3 @@ class TranscriptionClient:
 
 # Global client instance
 transcription_client = TranscriptionClient()
-

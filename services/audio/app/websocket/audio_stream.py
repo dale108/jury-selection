@@ -141,11 +141,60 @@ class AudioStreamHandler:
             },
         })
     
+    def _merge_wav_chunks(self, chunks: list[bytes]) -> bytes:
+        """Merge multiple WAV chunks into a single valid WAV file.
+        
+        Each chunk is a complete WAV file with header. We need to:
+        1. Keep the header from the first chunk
+        2. Extract PCM data (skip 44-byte header) from all chunks
+        3. Combine all PCM data
+        4. Update the header's size fields
+        """
+        if not chunks:
+            return b''
+        
+        if len(chunks) == 1:
+            return chunks[0]
+        
+        # Extract header from first chunk (first 44 bytes)
+        header = chunks[0][:44]
+        
+        # Verify it's a valid WAV header
+        if header[:4] != b'RIFF' or header[8:12] != b'WAVE':
+            print(f"Warning: Invalid WAV header, using simple concatenation", flush=True)
+            return b''.join(chunks)
+        
+        # Extract PCM data from all chunks (skip 44-byte header from each)
+        pcm_data_parts = []
+        for chunk in chunks:
+            if len(chunk) > 44:
+                pcm_data_parts.append(chunk[44:])
+            elif len(chunk) == 44:
+                # Empty data chunk, skip
+                continue
+        
+        # Combine all PCM data
+        combined_pcm = b''.join(pcm_data_parts)
+        
+        # Calculate new file size (header + data)
+        new_file_size = 36 + len(combined_pcm)  # 36 = RIFF header size (8) + fmt chunk (28)
+        new_data_size = len(combined_pcm)
+        
+        # Update header with new sizes
+        # Bytes 4-7: File size - 8
+        header = bytearray(header)
+        header[4:8] = new_file_size.to_bytes(4, 'little')
+        # Bytes 40-43: Data size
+        header[40:44] = new_data_size.to_bytes(4, 'little')
+        
+        # Combine header + PCM data
+        return bytes(header) + combined_pcm
+    
     async def _finalize(self) -> None:
         """Finalize the recording and trigger transcription."""
         if self.recording_id and self.all_audio_data:
-            # Combine all audio chunks into one file
-            complete_audio = b''.join(self.all_audio_data)
+            # Merge WAV chunks properly (each chunk is a complete WAV file)
+            complete_audio = self._merge_wav_chunks(self.all_audio_data)
             print(f"AudioStreamHandler: Finalizing recording with {len(complete_audio)} bytes total", flush=True)
             
             # Save complete recording file (WAV format from frontend)

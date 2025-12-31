@@ -18,10 +18,34 @@ export interface TranscriptSegment {
   confidence: number;
 }
 
-// WAV encoding utilities
-const SAMPLE_RATE = 16000;
+// Target sample rate for output WAV (OpenAI API prefers 16kHz for speech)
+const TARGET_SAMPLE_RATE = 16000;
 
-function encodeWAV(samples: Float32Array): ArrayBuffer {
+// Resample audio from source rate to target rate using linear interpolation
+function resample(samples: Float32Array, sourceSampleRate: number, targetSampleRate: number): Float32Array {
+  if (sourceSampleRate === targetSampleRate) {
+    return samples;
+  }
+  
+  const ratio = sourceSampleRate / targetSampleRate;
+  const newLength = Math.round(samples.length / ratio);
+  const result = new Float32Array(newLength);
+  
+  for (let i = 0; i < newLength; i++) {
+    const srcIndex = i * ratio;
+    const srcIndexFloor = Math.floor(srcIndex);
+    const srcIndexCeil = Math.min(srcIndexFloor + 1, samples.length - 1);
+    const fraction = srcIndex - srcIndexFloor;
+    
+    // Linear interpolation between adjacent samples
+    result[i] = samples[srcIndexFloor] * (1 - fraction) + samples[srcIndexCeil] * fraction;
+  }
+  
+  return result;
+}
+
+// Encode samples as WAV at the target sample rate
+function encodeWAV(samples: Float32Array, sampleRate: number = TARGET_SAMPLE_RATE): ArrayBuffer {
   const buffer = new ArrayBuffer(44 + samples.length * 2);
   const view = new DataView(buffer);
 
@@ -35,8 +59,8 @@ function encodeWAV(samples: Float32Array): ArrayBuffer {
   view.setUint32(16, 16, true); // Chunk size
   view.setUint16(20, 1, true); // Audio format (PCM)
   view.setUint16(22, 1, true); // Number of channels (mono)
-  view.setUint32(24, SAMPLE_RATE, true); // Sample rate
-  view.setUint32(28, SAMPLE_RATE * 2, true); // Byte rate
+  view.setUint32(24, sampleRate, true); // Sample rate
+  view.setUint32(28, sampleRate * 2, true); // Byte rate
   view.setUint16(32, 2, true); // Block align
   view.setUint16(34, 16, true); // Bits per sample
 
@@ -79,12 +103,14 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const audioWebSocketRef = useRef<WebSocket | null>(null);
   const transcriptWebSocketRef = useRef<WebSocket | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const durationIntervalRef = useRef<number | null>(null);
   const levelIntervalRef = useRef<number | null>(null);
   const isPausedRef = useRef<boolean>(false);
+  const nativeSampleRateRef = useRef<number>(48000);
   
   // Buffer to accumulate audio samples
   const audioBufferRef = useRef<Float32Array[]>([]);
@@ -166,27 +192,34 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
     // Clear buffer
     audioBufferRef.current = [];
 
+    // Resample from native rate to target rate (16kHz)
+    const resampledSamples = resample(combinedSamples, nativeSampleRateRef.current, TARGET_SAMPLE_RATE);
+    
     // Encode as WAV and send
-    const wavBuffer = encodeWAV(combinedSamples);
+    const wavBuffer = encodeWAV(resampledSamples, TARGET_SAMPLE_RATE);
     ws.send(wavBuffer);
   }, []);
 
   const startRecording = async () => {
     try {
-      // Request microphone access with specific constraints
+      // Request microphone access - don't force sample rate, let browser use native
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           channelCount: 1,
-          sampleRate: SAMPLE_RATE,
           echoCancellation: true,
           noiseSuppression: true,
         },
       });
       streamRef.current = stream;
 
-      // Set up audio context with desired sample rate
-      audioContextRef.current = new AudioContext({ sampleRate: SAMPLE_RATE });
+      // Create AudioContext with browser's default sample rate
+      // This avoids the sample rate mismatch error
+      audioContextRef.current = new AudioContext();
+      nativeSampleRateRef.current = audioContextRef.current.sampleRate;
+      console.log(`AudioContext sample rate: ${nativeSampleRateRef.current}Hz`);
+      
       const source = audioContextRef.current.createMediaStreamSource(stream);
+      sourceRef.current = source;
       
       // Set up analyser for level meter
       analyserRef.current = audioContextRef.current.createAnalyser();
@@ -203,8 +236,9 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
         setConnectionStatus('connected');
         
         // Set up ScriptProcessorNode for raw PCM capture
-        // Buffer size of 4096 at 16kHz = ~256ms per callback
-        const processor = audioContextRef.current!.createScriptProcessor(4096, 1, 1);
+        // Use a larger buffer for higher sample rates
+        const bufferSize = nativeSampleRateRef.current >= 44100 ? 8192 : 4096;
+        const processor = audioContextRef.current!.createScriptProcessor(bufferSize, 1, 1);
         processorRef.current = processor;
         
         processor.onaudioprocess = (e) => {
@@ -216,7 +250,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
           const samples = new Float32Array(inputData.length);
           samples.set(inputData);
           
-          // Add to buffer
+          // Add to buffer (at native sample rate, will resample when sending)
           audioBufferRef.current.push(samples);
         };
         
@@ -287,6 +321,12 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
     if (processorRef.current) {
       processorRef.current.disconnect();
       processorRef.current = null;
+    }
+    
+    // Disconnect source
+    if (sourceRef.current) {
+      sourceRef.current.disconnect();
+      sourceRef.current = null;
     }
 
     // Clear buffer interval

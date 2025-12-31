@@ -1,11 +1,6 @@
 # Transcription service specific dependencies
-openai==1.12.0
-pyannote.audio==3.1.1
-torch>=2.0.0
-torchaudio>=2.0.0
-soundfile==0.12.1
-librosa==0.10.1
+# Updated openai to support gpt-4o-transcribe-diarize and chunking_strategy
+openai>=1.50.0
 websockets==12.0
 minio==7.2.3
 aiofiles==23.2.1
-
